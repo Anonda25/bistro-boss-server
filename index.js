@@ -32,6 +32,7 @@ async function run() {
             const result = await menuCollaction.find().toArray()
             res.send(result)
         })
+        //this is a  reviwes api 
         app.get('/reviwes', async (req, res)=>{
             const result = await reviewsCollaction.find().toArray()
             res.send(result)
