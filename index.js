@@ -28,6 +28,7 @@ async function run() {
         const menuCollaction = client.db("BistroDB").collection("menu");
         const reviewsCollaction = client.db("BistroDB").collection("reviews");
         const cartsCollaction = client.db("BistroDB").collection("carts");
+        const paymentCollaction = client.db("BistroDB").collection("payments");
         // Connect the client to the server	(optional starting in v4.7)
         await client.connect();
 
@@ -193,15 +194,44 @@ async function run() {
         app.post('/payment', async (req, res) => {
             const { price } = req.body;
             const Amount = parseInt(price * 100);
-            
+
+
             const paymentIntent = await stripe.paymentIntents.create({
-                amount:Amount,
-                currency:'usd',
-                payment_method_types:['card']
-            })
+                amount: Amount,
+                currency: 'usd',
+                payment_method_types: ['card']
+            });
             res.send({
-                clientSecret:paymentIntent.client_secret
+                clientSecret: paymentIntent.client_secret
             })
+            // const paymentIntent = await stripe.paymentIntents.create({
+            //     amount: Amount,
+            //     currency:'usd',
+            //     payment_method_types:['card']
+            // })
+            // res.send({
+            //     clientSecret:paymentIntent.client_secret
+            // })
+        })
+        app.get('/payments/:email', verifyToken, async (req, res)=>{
+            const query = { email : req.params.email};
+            if (req.params.email !== req.decoded.email){
+                return res.status(403).send({message: 'unauthoreize'})
+            }
+            const result = await paymentCollaction.find(query).toArray();
+            res.send(result);
+        })
+
+        app.post('/payments', async (req, res) => {
+            const payment = req.body
+            const paymentResult = await paymentCollaction.insertOne(payment);
+            console.log(payment);
+
+            const query = { _id : {
+                $in: payment.cardIds.map(id => new ObjectId(id))
+            }}
+            const deleteResult = await cartsCollaction.deleteMany(query)
+            res.send({ paymentResult, deleteResult })
         })
 
         // Send a ping to confirm a successful connection
